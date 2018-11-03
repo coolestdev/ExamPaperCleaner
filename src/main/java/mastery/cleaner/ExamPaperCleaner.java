@@ -60,6 +60,7 @@ public class ExamPaperCleaner {
 	private static final String PROC_FOLDER = ROOT_FOLDER + "\\processed";
 	private static final String RESULT_FOLDER = ROOT_FOLDER + "\\result";
 	private static final String OPENCV_DLL = "opencv_java342.dll";
+	private static final String LOG_XML = "log4j2.xml";
 	private static final int BLACK_HUE_MAX = 180;
 	private static final int BLACK_SAT_MAX = 255;
 	private static final int PROG_MIN = 0;
@@ -75,7 +76,6 @@ public class ExamPaperCleaner {
 	private int blackValue = 127;
 	private Scalar blackMin = new Scalar(0,0,0);
 	private Scalar blackMax = new Scalar(BLACK_HUE_MAX,BLACK_SAT_MAX,blackValue);
-	private cleanHelper ch = new cleanHelper();
 
 	private JFrame frame = new JFrame();
 	private JTextArea logArea = new JTextArea();
@@ -88,6 +88,7 @@ public class ExamPaperCleaner {
 		try {
 			this.createLayout();
 			this.checkingFolders();
+			this.loadLogConfig();
 			this.loadLibrary();
 			startButton.setEnabled(true);
 		} catch (Exception e) {
@@ -138,6 +139,7 @@ public class ExamPaperCleaner {
 		startButton.addActionListener(new ActionListener() {
 	         public void actionPerformed(ActionEvent e) {
 	            setBlackValue((Integer) spinner.getValue());
+	            CleanHelper ch = new CleanHelper();
 	            ch.execute();
 	         }          
 	      });
@@ -171,14 +173,14 @@ public class ExamPaperCleaner {
 		
 		System.setProperty("sun.java2d.cmm", "sun.java2d.cmm.kcms.KcmsServiceProvider");
 
-		File fileOut = new File(LIB_FOLDER + FILE_SPRT + OPENCV_DLL);
+		File libFileOut = new File(LIB_FOLDER + FILE_SPRT + OPENCV_DLL);
 
-		if(!fileOut.exists()){
+		if(!libFileOut.exists()){
 			try {
 				InputStream inputStream = this.getClass().getResourceAsStream("/"+OPENCV_DLL);
 
-				if (fileOut != null && inputStream!=null) {
-					OutputStream outputStream = new FileOutputStream(fileOut);
+				if (libFileOut != null && inputStream!=null) {
+					OutputStream outputStream = new FileOutputStream(libFileOut);
 					byte[] buffer = new byte[1024];
 					int length;
 
@@ -199,8 +201,47 @@ public class ExamPaperCleaner {
 			}
 		}
 		
-		System.load(fileOut.getAbsolutePath());
+		
+		
+		System.load(libFileOut.getAbsolutePath());
 		writeLog("Library successfully loaded.", LogLevel.INFO);
+	}
+	
+	private void loadLogConfig() throws Exception{
+		
+		writeLog("Loading log config...", LogLevel.INFO);	
+
+		File xmlFileOut = new File(ROOT_FOLDER + FILE_SPRT + LOG_XML);
+
+		if(xmlFileOut.exists()){
+			xmlFileOut.delete();
+		}
+		
+		try {
+			InputStream inputStream = this.getClass().getResourceAsStream("/" + LOG_XML);
+
+			if (xmlFileOut != null && inputStream!=null) {
+				OutputStream outputStream = new FileOutputStream(xmlFileOut);
+				byte[] buffer = new byte[1024];
+				int length;
+
+				while ((length = inputStream.read(buffer)) > 0) {
+					outputStream.write(buffer, 0, length);
+				}
+
+				inputStream.close();
+				outputStream.close();
+
+			}else{
+				throw new Exception("Load log file fail");
+			}
+		} catch (IOException e) {
+			logger.error(e.getMessage());
+			e.printStackTrace();
+			throw e;
+		}
+		
+		writeLog("Log config successfully loaded.", LogLevel.INFO);
 	}
 
 	private void checkingFolders(){
@@ -275,7 +316,7 @@ public class ExamPaperCleaner {
 
 	}
 	
-	private class cleanHelper extends SwingWorker<Void, Void>{
+	private class CleanHelper extends SwingWorker<Void, Void>{
 
 		@Override
 		protected Void doInBackground() throws Exception {
@@ -284,7 +325,7 @@ public class ExamPaperCleaner {
 			
 			deteleFileInFolders();
 			
-			writeLog("Note Eraser Start... ", LogLevel.INFO);
+			writeLog("Exam Paper Cleaner Start... ", LogLevel.INFO);
 			
 			progressBar.setValue(PROG_MIN);
 			
@@ -330,7 +371,7 @@ public class ExamPaperCleaner {
 			writeLog("Cleaning Completed! Please check " + resultFolder.getAbsolutePath() + "!",LogLevel.INFO);
 			startButton.setEnabled(true);
 			try {
-				Runtime.getRuntime().exec("explorer.exe /select, C:\\NoteEraser\\result\\");
+				Runtime.getRuntime().exec("explorer.exe /select, " + resultFolder);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

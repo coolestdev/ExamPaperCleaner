@@ -5,7 +5,7 @@
 			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
 		</Console>
 		<RollingFile name="RollingLog">
-			<FileName>exam_paper_cleaner.log</FileName>
+			<FileName>C:\ExamPaperCleaner\exam_paper_cleaner.log</FileName>
 			<FilePattern>%d{yyyy-MM-dd-hh}-%i.log.zip
 			</FilePattern>
 			<PatternLayout>
