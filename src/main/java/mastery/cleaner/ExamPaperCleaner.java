@@ -39,6 +39,7 @@ import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.tools.imageio.ImageIOUtil;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
@@ -110,6 +111,7 @@ public class ExamPaperCleaner {
 	private JTextArea logArea = new JTextArea();
 	private JProgressBar progressBar = new JProgressBar();
 	private JButton startButton = new JButton("Start");
+	private JButton resetButton = new JButton("Reset All Threshold");
 	private JSpinner bbSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 255, 1));
 	private JSpinner lbSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 255, 1));
 	private JSpinner redSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 255, 1));
@@ -181,8 +183,6 @@ public class ExamPaperCleaner {
 		JLabel bbFuncLabel1 = new JLabel("Base Black Color Threshold");
 		JLabel bbFuncLabel2 = new JLabel("[0-255]. If \"questions\" are not clear tune this up!");
 		
-		bbSpinner.setValue(this.baseBlackMaxVal);
-		
 		bbFuncPanel.add(bbFuncLabel1);
 		bbFuncPanel.add(bbSpinner);
 		bbFuncPanel.add(bbFuncLabel2);
@@ -190,9 +190,7 @@ public class ExamPaperCleaner {
 		JPanel lbFuncPanel = new JPanel(new FlowLayout(FlowLayout.LEADING));
 		JLabel lbFuncLabel1 = new JLabel("Light Black Color Threshold");
 		JLabel lbFuncLabel2 = new JLabel("[0-255]. If pencils are still there tune this down!");
-		
-		lbSpinner.setValue(this.lightBlackMaxVal);
-		
+	
 		lbFuncPanel.add(lbFuncLabel1);
 		lbFuncPanel.add(lbSpinner);
 		lbFuncPanel.add(lbFuncLabel2);
@@ -200,8 +198,6 @@ public class ExamPaperCleaner {
 		JPanel redFuncPanel = new JPanel(new FlowLayout(FlowLayout.LEADING));
 		JLabel redFuncLabel1 = new JLabel("Red Color Threshold");
 		JLabel redFuncLabel2 = new JLabel("[0-255]. If red pens are still there tune this down!");
-		
-		redSpinner.setValue(this.redMaxVal);
 		
 		redFuncPanel.add(redFuncLabel1);
 		redFuncPanel.add(redSpinner);
@@ -211,8 +207,6 @@ public class ExamPaperCleaner {
 		JLabel blueFuncLabel1 = new JLabel("Blue Color Threshold");
 		JLabel blueFuncLabel2 = new JLabel("[0-255]. If blue pens are still there tune this down!");
 		
-		blueSpinner.setValue(this.blueMaxVal);
-		
 		blueFuncPanel.add(blueFuncLabel1);
 		blueFuncPanel.add(blueSpinner);
 		blueFuncPanel.add(blueFuncLabel2);
@@ -221,15 +215,16 @@ public class ExamPaperCleaner {
 		JLabel addFuncLabel1 = new JLabel("Additional Color Threshold");
 		JLabel addFuncLabel2 = new JLabel("[0-255]. If white pixels appear inside characters tune this up!");
 		
-		addSpinner.setValue(this.addMaxVal);
+		resetSpinnerVal();
 		
 		addFuncPanel.add(addFuncLabel1);
 		addFuncPanel.add(addSpinner);
 		addFuncPanel.add(addFuncLabel2);
 		
-		JPanel buttonPanel = new JPanel(new GridLayout(1,1));
+		JPanel buttonPanel = new JPanel(new GridLayout(1,2));
 		buttonPanel.setBorder(new EmptyBorder(0,5,0,5));
 		buttonPanel.add(startButton);
+		buttonPanel.add(resetButton);
 				
 		spinnerPanel.add(bbFuncPanel);
 		spinnerPanel.add(lbFuncPanel);
@@ -249,6 +244,13 @@ public class ExamPaperCleaner {
 	         }          
 	      });
 		
+		resetButton.addActionListener(new ActionListener() {
+	         public void actionPerformed(ActionEvent e) {
+	        	 setAndUpdateFilterVal();
+	            resetSpinnerVal();
+	         }          
+	      });
+		
 		JPanel logPanel = new JPanel(new GridLayout(1,1));
 		logPanel.setBorder(new EmptyBorder(0,5,0,5));
 		logArea.setEditable(false);
@@ -263,6 +265,14 @@ public class ExamPaperCleaner {
 		
 		frame.setVisible(true);
 		
+	}
+		
+	private void resetSpinnerVal() {
+		bbSpinner.setValue(26);
+		lbSpinner.setValue(127);
+		redSpinner.setValue(76);
+		blueSpinner.setValue(76);
+		addSpinner.setValue(127);
 	}
 
 	private void loadLibrary() throws Exception{
@@ -551,6 +561,27 @@ public class ExamPaperCleaner {
 			writeLog("Saving image to processed folder...", LogLevel.INFO);
 			String destFile = wkFolder + FILE_SPRT + imgFile.getName();
 			Imgcodecs.imwrite(destFile, dest);
+			
+			Mat gray = new Mat();
+			Imgproc.cvtColor(src, gray, Imgproc.COLOR_BGR2GRAY);
+			
+			Imgproc.medianBlur(gray, gray, 5);
+			
+			Mat circles = new Mat();
+			Imgproc.HoughCircles(gray, circles, Imgproc.HOUGH_GRADIENT, 1.0,
+	                (double)gray.rows()/16, // change this value to detect circles with different distances to each other
+	                100.0, 30.0, 0, 0); // change the last two parameters
+	                // (min_radius & max_radius) to detect larger circles
+	        for (int x = 0; x < circles.cols(); x++) {
+	        	logger.info("Circle found");
+	            double[] c = circles.get(0, x);
+	            Point center = new Point(Math.round(c[0]), Math.round(c[1]));
+	            // circle center
+	            Imgproc.circle(src, center, 1, new Scalar(0,100,100), 3, 8, 0 );
+	            // circle outline
+	            int radius = (int) Math.round(c[2]);
+	            Imgproc.circle(src, center, radius, new Scalar(255,0,255), 3, 8, 0 );
+	        }
 
 		}
 
