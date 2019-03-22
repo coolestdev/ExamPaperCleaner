@@ -562,7 +562,7 @@ public class ExamPaperCleaner {
 			String destFile = wkFolder + FILE_SPRT + imgFile.getName();
 			Imgcodecs.imwrite(destFile, dest);
 			
-			Mat gray = new Mat();
+			/*Mat gray = new Mat();
 			Imgproc.cvtColor(src, gray, Imgproc.COLOR_BGR2GRAY);
 			
 			Imgproc.medianBlur(gray, gray, 5);
@@ -581,7 +581,7 @@ public class ExamPaperCleaner {
 	            // circle outline
 	            int radius = (int) Math.round(c[2]);
 	            Imgproc.circle(src, center, radius, new Scalar(255,0,255), 3, 8, 0 );
-	        }
+	        }*/
 
 		}
 
